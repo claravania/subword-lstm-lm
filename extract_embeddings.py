@@ -15,8 +15,8 @@ from word import WordModel
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--test_file', type=str, default='../../data/multi/id/analysis/inflection_redup.txt',
-                        help="test file")
+    parser.add_argument('--test_file', type=str, default='../../data/multi/id/analysis/inflection.txt',
+                        help="text file consists of words of interest")
     parser.add_argument('--save_dir', type=str, default='wiki_models/id/bpe.lstm',
                         help='directory of the checkpointed models')
     args = parser.parse_args()
@@ -52,8 +52,6 @@ def test(test_args):
         args = pickle.load(f)
 
     args.save_dir = test_args.save_dir
-    # args.gpu = test_args.gpu
-
     data_loader = TextLoader(args, train=False)
     test_data = data_loader.read_dataset(test_args.test_file)
 
@@ -92,9 +90,6 @@ def test(test_args):
         sys.exit("Unknown unit or composition.")
 
     print("Begin testing...")
-    # gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.5)
-    # with tf.Graph().as_default(), tf.Session(
-    #         config=tf.ConfigProto(log_device_placement=False, gpu_options=gpu_options)) as sess:
     with tf.Graph().as_default(), tf.Session() as sess:
         with tf.variable_scope("model"):
             mtest = lm_model(args, is_training=False, is_testing=True)

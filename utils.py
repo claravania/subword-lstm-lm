@@ -50,9 +50,10 @@ class TextLoader:
             self.ngram_to_id = dict()
             self.unk_ngram_list = set()
 
-        # self.output_vocab = {}
-        # if args.output_vocab_file:
-        #     self.output_vocab = self.load_vocab_dict(args.output_vocab_file)
+        self.output_vocab = {}
+        self.unk_list = set()
+        if args.output_vocab_file:
+            self.output_vocab, self.unk_list = self.load_vocab_dict(args.output_vocab_file)
 
         if train:
             self.train_data = self.read_dataset(args.train_file)
@@ -100,15 +101,6 @@ class TextLoader:
             pickle.dump((self.word_to_id, self.unk_word_list), f)
         if self.unit != "word":
             self.preprocess_sub_units()
-
-        # if self.redup_list:
-        #     with open(self.redup_list) as f:
-        #         for line in f:
-        #             line = line.strip().split()
-        #             word = line[0]
-        #             if word.startswith("#"):
-        #                 continue
-        #             self.redup_words[word] = 1
 
     def preprocess_sub_units(self):
         """
@@ -202,8 +194,8 @@ class TextLoader:
         Load preprocessed dictionaries, this is called during testing.
         """
         with open(vocab_file, 'rb') as f:
-            output_vocab, _ = pickle.load(f)
-        return output_vocab
+            output_vocab, unk_list = pickle.load(f)
+        return output_vocab, unk_list
 
     def build_vocab(self, mode):
         """
@@ -223,18 +215,27 @@ class TextLoader:
         count_pairs = sorted(counter.items(), key=lambda x: (-x[-1], x[0]))
         item_to_id = dict()
         unk_list = set()
-        # self.count_pairs = count_pairs
 
         if mode == "char":
             # '^' is a start of word symbol
             # '$' is a end of word symbol
             item_to_id = self.add_to_dict(item_to_id, '^', '$')
         else:
-            item_to_id['<unk>'] = len(item_to_id)
-            if self.sos != '':
-                item_to_id[self.sos] = len(item_to_id)
-            if self.eos != '':
-                item_to_id[self.eos] = len(item_to_id)
+            if len(self.output_vocab) > 0:
+                print('Using output vocab!')
+                print('Output vocab size:', self.out_vocab_size)
+                sorted_vocab = sorted(self.output_vocab.items(), key=operator.itemgetter(1))
+
+                for k, v in sorted_vocab:
+                    item_to_id[k] = len(item_to_id)
+                    if len(item_to_id) == self.out_vocab_size:
+                        break
+            else:
+                item_to_id['<unk>'] = len(item_to_id)
+                if self.sos != '':
+                    item_to_id[self.sos] = len(item_to_id)
+                if self.eos != '':
+                    item_to_id[self.eos] = len(item_to_id)
 
         for i, (token, freq) in enumerate(count_pairs):
             if token not in item_to_id:
@@ -743,7 +744,6 @@ class TextLoader:
         data_len = len(raw_data)
         batch_len = data_len // batch_size
         data = []
-
         for i in range(batch_size):
             x = raw_data[batch_len * i:batch_len * (i + 1)]
             data.append(x)
@@ -756,61 +756,13 @@ class TextLoader:
         for i in range(epoch_size):
             xs = list()
             ys = list()
-            tokens = list()
+
             for j in range(batch_size):
                 x = data[j][i * num_steps:(i + 1) * num_steps]
                 y = data[j][i * num_steps + 1:(i + 1) * num_steps + 1]
 
-                tokens.append(y)
                 xs.append(self.encode_data(x))
                 ys.append(self.data_to_word_ids(y, True))
 
-            yield (xs, ys, tokens)
-
-    def sentence_iterator(self, sentences, batch_size, num_steps, word_list):
-        """
-        Iterate over sentence in the given sentences
-        :param sentences: array of sentences
-        :return: iterator for sentences
-        """
-
-        data_x = []
-        data_y = []
-        for sentence in sentences:
-            sentence = self.sos + " " + sentence
-            tokens = sentence.split()
-            tokens = tokens[:-1]
-            tokens.append(self.eos)
-
-            if len(tokens) > num_steps:
-                xs = tokens[:num_steps]
-                ys = tokens[1:num_steps+1]
-            else:
-                xs = tokens
-                ys = tokens[1:]
-
-            if len(xs) < num_steps:
-                for i in range(len(xs), num_steps):
-                    xs.append("<unk>")
-            if len(ys) < num_steps:
-                for i in range(len(ys), num_steps):
-                    ys.append("<unk>")
-
-            assert len(xs) <= num_steps
-            assert len(xs) == len(ys)
-
-            contain_word = False
-            for token in ys:
-                if token in word_list:
-                    contain_word = True
-            if contain_word:
-                data_x.append(xs)
-                data_y.append(ys)
-
-        for i in range(len(data_x)):
-            gold_sentence = " ".join(data_y[i])
-            x = [self.encode_data(data_x[i])]
-            y = [self.data_to_word_ids(data_y[i], True)]
-
-            yield (x, y, gold_sentence)
+            yield (xs, ys)
 

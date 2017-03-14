@@ -10,20 +10,18 @@ import pickle
 import sys
 from utils import TextLoader
 from biLSTM import BiLSTMModel
-from lstm_redup import LSTMRedup
-from charCNN import CharCNN
 from add import AdditiveModel
 from word import WordModel
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--train_file', type=str, default='../../data/multi/id/bpe.train.lc.txt',
+    parser.add_argument('--train_file', type=str, default='../../data/multi/ru/small/train.txt',
                         help="training data")
     parser.add_argument('--dev_file', type=str, default='../../data/multi/id/bpe.dev.lc.txt',
                         help="development data")
     parser.add_argument('--output_vocab_file', type=str, default='',
-                        help="vocab dictionary (word to id)")
+                        help="vocab file, only use this if you want to specufy special output vocabulary!")
     parser.add_argument('--output', '-o', type=str, default='train.log',
                         help='output file')
     parser.add_argument('--save_dir', type=str, default='model',
@@ -57,7 +55,7 @@ def main():
                         help='validation interval')
     parser.add_argument('--init_scale', type=float, default=0.1,
                         help='initial weight scale')
-    parser.add_argument('--grad_clip', type=float, default=5.0,
+    parser.add_argument('--grad_clip', type=float, default=2.0,
                         help='maximum permissible norm of the gradient')
     parser.add_argument('--learning_rate', type=float, default=1.0,
                         help='initial learning rate')
@@ -69,8 +67,6 @@ def main():
                         help='the gpu id, if have more than one gpu')
     parser.add_argument('--optimization', type=str, default='sgd',
                         help='sgd, momentum, or adagrad')
-    parser.add_argument('--redup_list', type=str, default='',
-                        help='list of reduplicated words')
     parser.add_argument('--train', type=str, default='softmax',
                         help='sgd, momentum, or adagrad')
     parser.add_argument('--SOS', type=str, default='false',
@@ -110,35 +106,7 @@ def run_epoch(session, m, data, data_loader, eval_op, verbose=False):
                                      {m.input_data: x,
                                       m.targets: y,
                                       m.initial_lm_state: state})
-        costs += cost
-        iters += m.num_steps
 
-        if verbose and step % (epoch_size // 10) == 10:
-            print("%.3f perplexity: %.3f speed: %.0f wps" %
-                  (step * 1.0 / epoch_size, np.exp(costs / iters),
-                   iters * m.batch_size / (time.time() - start_time)))
-
-    return np.exp(costs / iters)
-
-
-def run_epoch_redup(session, m, data, data_loader, eval_op, verbose=False):
-    epoch_size = ((len(data) // m.batch_size) - 1) // m.num_steps
-    start_time = time.time()
-
-    costs = 0.0
-    iters = 0
-    state = session.run(m.initial_lm_state)
-
-    if data_loader.composition == "bi-lstm":
-        session.run(m.initial_fw_state)
-        session.run(m.initial_bw_state)
-
-    for step, (x, y, z) in enumerate(data_loader.data_iterator(data, m.batch_size, m.num_steps)):
-        cost, state, _ = session.run([m.cost, m.final_state, eval_op],
-                                     {m.input_data: x,
-                                      m.targets: y,
-                                      m.cues: z,
-                                      m.initial_lm_state: state})
         costs += cost
         iters += m.num_steps
 
@@ -218,21 +186,12 @@ def train(args):
     elif args.composition == "addition":
         lm_model = AdditiveModel
     elif args.composition == "bi-lstm":
-        if args.redup_list:
-            lm_model = LSTMRedup
-        else:
-            lm_model = BiLSTMModel
-    elif args.composition == "cnn":
-        lm_model = CharCNN
+        lm_model = BiLSTMModel
     else:
         sys.exit("Unknown unit or composition.")
 
+    print(args)
     print("Begin training...")
-    # gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.9)
-    # with tf.Graph().as_default(), tf.Session(
-    #         config=tf.ConfigProto(log_device_placement=False, gpu_options=gpu_options)) as sess:
-    #
-
     with tf.Graph().as_default(), tf.Session() as sess:
         if args.seed != 0:
             tf.set_random_seed(args.seed)
@@ -250,6 +209,8 @@ def train(args):
         saver = tf.train.Saver(tf.all_variables(), max_to_keep=1)
         tf.initialize_all_variables().run()
         dev_pp = 10000000.0
+
+        # print(sess.run(mtrain.embedding))
 
         # save only the last model
         ckpt = tf.train.get_checkpoint_state(args.save_dir)
@@ -275,12 +236,8 @@ def train(args):
             mtrain.assign_lr(sess, learning_rate)
             print("Learning rate: %.3f" % sess.run(mtrain.lr))
 
-            if args.redup_list:
-                train_perplexity = run_epoch_redup(sess, mtrain, train_data, data_loader, mtrain.train_op, verbose=True)
-                dev_perplexity = run_epoch_redup(sess, mdev, dev_data, data_loader, tf.no_op())
-            else:
-                train_perplexity = run_epoch(sess, mtrain, train_data, data_loader, mtrain.train_op, verbose=True)
-                dev_perplexity = run_epoch(sess, mdev, dev_data, data_loader, tf.no_op())
+            train_perplexity = run_epoch(sess, mtrain, train_data, data_loader, mtrain.train_op, verbose=True)
+            dev_perplexity = run_epoch(sess, mdev, dev_data, data_loader, tf.no_op())
 
             print("Train Perplexity: %.3f" % train_perplexity)
             print("Valid Perplexity: %.3f" % dev_perplexity)

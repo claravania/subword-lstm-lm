@@ -72,30 +72,13 @@ class AdditiveModel(object):
 
             softmax_w = tf.get_variable("softmax_w", [out_vocab_size, rnn_size])
             softmax_b = tf.get_variable("softmax_b", [out_vocab_size])
-            train_labels = tf.reshape(self._targets, [-1, 1])
 
             # compute cross entropy loss
-            if not is_training:
-                logits = tf.matmul(lm_outputs, softmax_w, transpose_b=True) + softmax_b
-                loss = tf.nn.seq2seq.sequence_loss_by_example(
-                    [logits],
-                    [tf.reshape(self._targets, [-1])],
-                    [tf.ones([batch_size * num_steps])])
-            else:
-                if args.train == "nce":
-                    with tf.device("/cpu:0"):
-                        loss = tf.nn.nce_loss(softmax_w, softmax_b, lm_outputs,
-                                              train_labels, 100, out_vocab_size)
-                elif args.train == "sampled-softmax":
-                    with tf.device("/cpu:0"):
-                        loss = tf.nn.sampled_softmax_loss(softmax_w, softmax_b, lm_outputs,
-                                                          train_labels, 100, out_vocab_size)
-                else:
-                    logits = tf.matmul(lm_outputs, softmax_w, transpose_b=True) + softmax_b
-                    loss = tf.nn.seq2seq.sequence_loss_by_example(
-                        [logits],
-                        [tf.reshape(self._targets, [-1])],
-                        [tf.ones([batch_size * num_steps])])
+            logits = tf.matmul(lm_outputs, softmax_w, transpose_b=True) + softmax_b
+            loss = tf.nn.seq2seq.sequence_loss_by_example(
+                [logits],
+                [tf.reshape(self._targets, [-1])],
+                [tf.ones([batch_size * num_steps])])
 
             # compute cost
             self._cost = cost = tf.reduce_sum(loss) / batch_size
