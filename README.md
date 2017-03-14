@@ -29,9 +29,9 @@ python3 train.py --train_file=data/multi/en/train.txt \
 Options for units are: **char**, **char-ngram**, **morpheme** (BPE/Morfessor), **oracle**, and **word**.
 Options for compositions are: **none** (word only), **bi-lstm**, and **addition**.
 
-The **morpheme** representation uses BPE-like representation. Each word is replaced by its word segments, for example *imperfect* is written as *im@@perfect*, where '@@' denotes the segment boundary. You can use the segmentation tool provided in [here](http://www.aclweb.org/anthology/P16-1162) to preprocess your dataset.
+The **morpheme** representation uses BPE-like representation. Each word is replaced by its word segments, for example `imperfect` is written as `im@@perfect`, where `@@` denotes the segment boundary. You can use the segmentation tool provided in [here](http://www.aclweb.org/anthology/P16-1162) to preprocess your dataset.
 
-In the **oracle** setting, you need to replace each word in the data with its morphological analysis. For example, in Czech the word *Dodavatel* is replaced by the following (note that the actual word form is not used for experiment):
+In the **oracle** setting, you need to replace each word in the data with its morphological analysis. For example, in Czech the word `Dodavatel` is replaced by the following (note that the actual word form is not used for experiment):
 ```
 word:Dodavatel+lemma:dodavatel+pos:NOUN+Animacy:Anim+Case:Nom+Gender:Masc+Negative:Pos+Number:Sing
 ```
