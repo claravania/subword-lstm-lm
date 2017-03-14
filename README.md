@@ -1,4 +1,4 @@
-# LSTM Language Model with Subword Unit Input Representations
+# LSTM Language Model with Subword Units Input Representations
 
 This are implementations of various LSTM-based language models using Tensorflow. 
 Codes are based on tensorflow tutorial on building a PTB LSTM model. 
@@ -26,7 +26,7 @@ python3 train.py --train_file=data/multi/en/train.txt \
 					--lowercase \
 					--SOS=true
 ```
-Options for units are: **char**, **char-ngram**, **morpheme** (BPE/Morfessor), **oracle**, and **word**.
+Options for units are: **char**, **char-ngram**, **morpheme** (BPE/Morfessor), **oracle**, and **word**.  
 Options for compositions are: **none** (word only), **bi-lstm**, and **addition**.
 
 The **morpheme** representation uses BPE-like representation. Each word is replaced by its word segments, for example `imperfect` is written as `im@@perfect`, where `@@` denotes the segment boundary. You can use the segmentation tool provided in [here](http://www.aclweb.org/anthology/P16-1162) to preprocess your dataset.
@@ -45,15 +45,15 @@ python3 test.py --test_file=data/multi/en/test.txt \
 ```
 
 ## Notes
-Character-based bi-LSTM model:
-"Finding Function in Form: Compositional Character Models for Open Vocabulary Word Representation".
+Character-based bi-LSTM model:  
+"Finding Function in Form: Compositional Character Models for Open Vocabulary Word Representation".  
 http://www.cs.cmu.edu/~lingwang/papers/emnlp2015.pdf
 
-Word segments (BPE) model:
-"Neural Machine Translation of Rare Words with Subword Units" 
+Word segments (BPE) model:  
+"Neural Machine Translation of Rare Words with Subword Units"  
 http://www.aclweb.org/anthology/P16-1162
 
-Character ngrams:
+Character ngrams:  
 The model first segments word into its character ngrams, e.g. cat = ('c', 'a', 't', '^c', 'ca', 'at', 't$). The embedding of the word is computed by summing up all the ngrams embeddings of the word.
 
 
