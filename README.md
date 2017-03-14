@@ -1,5 +1,4 @@
 # LSTM Language Model with Subword Unit Input Representations
-=============================================================
 
 This are implementations of various LSTM-based language models using Tensorflow. 
 Codes are based on tensorflow tutorial on building a PTB LSTM model. 
@@ -7,13 +6,10 @@ Some extensions are made to handle input from subword units level, i.e. characte
 (i.e. from BPE/Morfessor).
 
 ## Dependencies
-===============
 1. Tensorflow version 0.10.0
 2. Python 3
 
 ## Training
-===========
-
 Use the script train.py to train a model. Below is an example to train a character bi-LSTM model for English.
 ```
 python3 train.py --train_file=data/multi/en/train.txt \
@@ -42,7 +38,6 @@ word:Dodavatel+lemma:dodavatel+pos:NOUN+Animacy:Anim+Case:Nom+Gender:Masc+Negati
 Please look at train.py for more hyperparameter options.
 
 ## Testing
-==========
 To test a model, run test.py.
 ```
 python3 test.py --test_file=data/multi/en/test.txt \
@@ -50,8 +45,6 @@ python3 test.py --test_file=data/multi/en/test.txt \
 ```
 
 ## Notes
-========
-
 Character-based bi-LSTM model:
 "Finding Function in Form: Compositional Character Models for Open Vocabulary Word Representation".
 http://www.cs.cmu.edu/~lingwang/papers/emnlp2015.pdf
