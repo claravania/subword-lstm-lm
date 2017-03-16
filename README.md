@@ -6,7 +6,7 @@ Some extensions are made to handle input from subword units level, i.e. characte
 (i.e. from BPE/Morfessor).
 
 ## Dependencies
-1. Tensorflow version 0.10.0
+1. Tensorflow (tested on v0.10.0)
 2. Python 3
 
 ## Training
