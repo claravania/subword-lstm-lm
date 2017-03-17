@@ -86,8 +86,6 @@ def test(test_args):
         lm_model = AdditiveModel
     elif args.composition == "bi-lstm":
         lm_model = BiLSTMModel
-    elif args.composition == "cnn":
-        lm_model = CharCNN
     else:
         sys.exit("Unknown unit or composition.")
 

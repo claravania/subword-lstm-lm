@@ -16,12 +16,12 @@ from word import WordModel
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--train_file', type=str, default='../../data/multi/ru/small/train.txt',
+    parser.add_argument('--train_file', type=str, default='../../data/multi/cs/train.txt',
                         help="training data")
-    parser.add_argument('--dev_file', type=str, default='../../data/multi/id/bpe.dev.lc.txt',
+    parser.add_argument('--dev_file', type=str, default='../../data/multi/cs/dev.txt',
                         help="development data")
     parser.add_argument('--output_vocab_file', type=str, default='',
-                        help="vocab file, only use this if you want to specufy special output vocabulary!")
+                        help="vocab file, only use this if you want to specify special output vocabulary!")
     parser.add_argument('--output', '-o', type=str, default='train.log',
                         help='output file')
     parser.add_argument('--save_dir', type=str, default='model',
@@ -30,13 +30,11 @@ def main():
                         help='size of RNN hidden state')
     parser.add_argument('--num_layers', type=int, default=2,
                         help='number of layers in the RNN')
-    parser.add_argument('--num_highway', type=int, default=1,
-                        help='number of highway layers (for CNN model)')
     parser.add_argument('--model', type=str, default='lstm',
                         help='rnn, gru, or lstm')
-    parser.add_argument('--unit', type=str, default='morpheme',
+    parser.add_argument('--unit', type=str, default='char-ngram',
                         help='char, char-ngram, morpheme, word, or oracle')
-    parser.add_argument('--composition', type=str, default='bi-lstm',
+    parser.add_argument('--composition', type=str, default='addition',
                         help='none(word), addition, or bi-lstm')
     parser.add_argument('--lowercase', dest='lowercase', action='store_true',
                         help='lowercase data', default=False)
@@ -165,15 +163,11 @@ def train(args):
                 args.bilstm_num_steps = data_loader.max_morph_per_word
             else:
                 sys.exit("Wrong unit.")
-        elif args.composition == "cnn":
-            if args.unit == "char":
-                args.max_word_length = data_loader.max_word_len
-                fout.write("Maximum word length: " + str(data_loader.max_word_len) + "\n")
-            else:
-                sys.exit("Wrong unit.")
         elif args.composition == "addition":
-            if args.unit not in ["char-ngrams", "morphemes", "oracle"]:
+            if args.unit not in ["char-ngram", "morpheme", "oracle"]:
                 sys.exit("Wrong composition.")
+        else:
+            sys.exit("Wrong unit/composition.")
     else:
         if args.composition != "none":
             sys.exit("Wrong composition.")
