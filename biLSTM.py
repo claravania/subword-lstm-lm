@@ -2,7 +2,6 @@
 # Author: Clara Vania
 
 import tensorflow as tf
-import ipdb
 
 class BiLSTMModel(object):
     """
@@ -12,7 +11,6 @@ class BiLSTMModel(object):
     https://www.tensorflow.org/versions/r0.7/tutorials/recurrent/index.html
     """
     def __init__(self, args, is_training, is_testing=False, keep_num_step=False):
-        ipdb.set_trace()
         self.batch_size = batch_size = args.batch_size
         self.num_steps = num_steps = args.num_steps
         self.bilstm_num_steps = bilstm_num_steps = args.bilstm_num_steps
@@ -99,12 +97,6 @@ class BiLSTMModel(object):
                     # process current sentence
                     input_ = inputs[i]
 
-                    # split sentence into a sequence of chars
-                    # here the sequence length is the bilstm_num_steps
-                    # and the batch size is the number of words in the sentence
-                    #chars = tf.split(input_, bilstm_num_steps, 1)
-                    #chars = [tf.squeeze(char_, [1]) for char_ in chars]
-
                     # run bi-rnn
                     c2w_output, (fw_state, bw_state) = \
                         tf.nn.bidirectional_dynamic_rnn(c2w_fw_cell,
@@ -151,7 +143,6 @@ class BiLSTMModel(object):
                         lm_inputs.append(input_)
                     # self.emb = tf.concat(0, lm_inputs)
 
-                #lm_outputs, lm_state = tf.nn.dynamic_rnn(lm_cell, lm_inputs, initial_state=self._initial_lm_state)
                 lm_outputs, lm_state = tf.nn.dynamic_rnn(lm_cell, c2w_outputs, initial_state=self._initial_lm_state)
                 lm_outputs = tf.concat(lm_outputs, 1)
                 lm_outputs = tf.reshape(lm_outputs, [-1, rnn_size])
