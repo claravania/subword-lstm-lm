@@ -2,7 +2,7 @@
 # Author: Clara Vania
 
 import tensorflow as tf
-
+import ipdb
 
 class BiLSTMModel(object):
     """
@@ -12,7 +12,7 @@ class BiLSTMModel(object):
     https://www.tensorflow.org/versions/r0.7/tutorials/recurrent/index.html
     """
     def __init__(self, args, is_training, is_testing=False, keep_num_step=False):
-
+        ipdb.set_trace()
         self.batch_size = batch_size = args.batch_size
         self.num_steps = num_steps = args.num_steps
         self.bilstm_num_steps = bilstm_num_steps = args.bilstm_num_steps
@@ -59,12 +59,12 @@ class BiLSTMModel(object):
             with tf.variable_scope("c2w"):
                 # LSTM cell for C2W, forward and backward
                 with tf.variable_scope("forward"):
-                    c2w_fw_cell = cell_fn(rnn_size, input_size=subword_dim, forget_bias=0.0)
+                    c2w_fw_cell = cell_fn(rnn_size, forget_bias=0.0)
                     if is_training and args.keep_prob < 1:
                         c2w_fw_cell = tf.nn.rnn_cell.DropoutWrapper(c2w_fw_cell, output_keep_prob=args.keep_prob)
                     self._initial_fw_state = c2w_fw_cell.zero_state(num_steps, tf.float32)
                 with tf.variable_scope("backward"):
-                    c2w_bw_cell = cell_fn(rnn_size, input_size=subword_dim, forget_bias=0.0)
+                    c2w_bw_cell = cell_fn(rnn_size, forget_bias=0.0)
                     if is_training and args.keep_prob < 1:
                         c2w_bw_cell = tf.nn.rnn_cell.DropoutWrapper(c2w_bw_cell, output_keep_prob=args.keep_prob)
                     self._initial_bw_state = c2w_bw_cell.zero_state(num_steps, tf.float32)
@@ -79,7 +79,7 @@ class BiLSTMModel(object):
 
                 # print(inputs.get_shape())
 
-                inputs = tf.split(0, batch_size, inputs)
+                inputs = tf.split(inputs, batch_size, 0)
                 inputs = [tf.squeeze(input_, [0]) for input_ in inputs]
 
                 c2w_outputs = []
@@ -102,23 +102,26 @@ class BiLSTMModel(object):
                     # split sentence into a sequence of chars
                     # here the sequence length is the bilstm_num_steps
                     # and the batch size is the number of words in the sentence
-                    chars = tf.split(1, bilstm_num_steps, input_)
-                    chars = [tf.squeeze(char_, [1]) for char_ in chars]
+                    #chars = tf.split(input_, bilstm_num_steps, 1)
+                    #chars = [tf.squeeze(char_, [1]) for char_ in chars]
 
                     # run bi-rnn
-                    c2w_output, fw_state, bw_state = tf.nn.bidirectional_rnn(c2w_fw_cell, c2w_bw_cell, chars,
-                                                                                     initial_state_fw=fw_state,
-                                                                                     initial_state_bw=bw_state)
+                    c2w_output, (fw_state, bw_state) = \
+                        tf.nn.bidirectional_dynamic_rnn(c2w_fw_cell,
+                                                        c2w_bw_cell,
+                                                        input_,
+                                                        initial_state_fw=fw_state,
+                                                        initial_state_bw=bw_state)
                     # compute the word representation
                     # print fw_state.get_shape()
                     # print c2w_output[0].get_shape()
-                    fw_param = tf.matmul(fw_state, softmax_w_fw)
-                    bw_param = tf.matmul(bw_state, softmax_w_bw)
+                    fw_param = tf.matmul(tf.concat(fw_state, 1), softmax_w_fw)
+                    bw_param = tf.matmul(tf.concat(bw_state, 1), softmax_w_bw)
                     final_output = fw_param + bw_param + b_c2w
                     c2w_outputs.append(tf.expand_dims(final_output, 0))
                 self._final_fw_state = fw_state
                 self._final_bw_state = bw_state
-                c2w_outputs = tf.concat(0, c2w_outputs)
+                c2w_outputs = tf.concat(c2w_outputs, 0)
                 # print(c2w_outputs.get_shape())
 
             # ********************************************************************************
@@ -133,10 +136,9 @@ class BiLSTMModel(object):
 
                 # split input into a list
                 self.input_vectors = c2w_outputs
-                inputs = tf.split(1, num_steps, c2w_outputs)
-
+                inputs = tf.split(c2w_outputs, num_steps, 1)
                 if word_dim == rnn_size:
-                    lm_inputs = [tf.squeeze(input_, [1]) for input_ in inputs]
+                    lm_inputs = tf.stack([tf.squeeze(input_, [1]) for input_ in inputs])
                     # self.emb = c2w_outputs
                 else:
                     softmax_win = tf.get_variable("softmax_win", [word_dim, rnn_size])
@@ -149,8 +151,9 @@ class BiLSTMModel(object):
                         lm_inputs.append(input_)
                     # self.emb = tf.concat(0, lm_inputs)
 
-                lm_outputs, lm_state = tf.nn.rnn(lm_cell, lm_inputs, initial_state=self._initial_lm_state)
-                lm_outputs = tf.concat(1, lm_outputs)
+                #lm_outputs, lm_state = tf.nn.dynamic_rnn(lm_cell, lm_inputs, initial_state=self._initial_lm_state)
+                lm_outputs, lm_state = tf.nn.dynamic_rnn(lm_cell, c2w_outputs, initial_state=self._initial_lm_state)
+                lm_outputs = tf.concat(lm_outputs, 1)
                 lm_outputs = tf.reshape(lm_outputs, [-1, rnn_size])
 
                 softmax_w = tf.get_variable("softmax_w", [out_vocab_size, rnn_size])
@@ -158,10 +161,9 @@ class BiLSTMModel(object):
 
                 # compute cross entropy loss
                 logits = tf.matmul(lm_outputs, softmax_w, transpose_b=True) + softmax_b
-                loss = tf.nn.seq2seq.sequence_loss_by_example(
-                    [logits],
-                    [tf.reshape(self._targets, [-1])],
-                    [tf.ones([batch_size * num_steps])])
+                loss = tf.nn.sparse_softmax_cross_entropy_with_logits(
+                    logits=logits,
+                    labels=tf.reshape(self._targets, [-1]))
 
                 # compute cost
                 self.per_word_pp = loss

@@ -35,7 +35,7 @@ class TextLoader:
         self.max_word_len = 0
         self.subword_vocab_size = 0
         self.word_vocab_size = 0
-
+        print("reading text")
         # Dictionaries and lists
         self.char_to_id = dict()
         self.word_to_id = dict()

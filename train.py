@@ -13,7 +13,6 @@ from biLSTM import BiLSTMModel
 from add import AdditiveModel
 from word import WordModel
 
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--train_file', type=str, default='../../data/multi/cs/train.txt',
