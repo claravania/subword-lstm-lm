@@ -59,15 +59,16 @@ class AdditiveModel(object):
             softmax_bin = tf.get_variable("softmax_bin", [rnn_size])
 
             # split input into a list
-            inputs = tf.split(1, num_steps, inputs)
+            inputs = tf.split(inputs, num_steps, 1)
             lm_inputs = []
             for input_ in inputs:
                 input_ = tf.squeeze(input_, [1])
                 input_ = tf.matmul(input_, softmax_win) + softmax_bin
                 lm_inputs.append(input_)
+            lm_inputs = tf.stack(lm_inputs, axis=1)
 
-            lm_outputs, lm_state = tf.nn.rnn(lm_cell, lm_inputs, initial_state=self._initial_lm_state)
-            lm_outputs = tf.concat(1, lm_outputs)
+            lm_outputs, lm_state = tf.nn.dynamic_rnn(lm_cell, lm_inputs, initial_state=self._initial_lm_state)
+            lm_outputs = tf.concat(lm_outputs, 1)
             lm_outputs = tf.reshape(lm_outputs, [-1, rnn_size])
 
             softmax_w = tf.get_variable("softmax_w", [out_vocab_size, rnn_size])
@@ -75,10 +76,11 @@ class AdditiveModel(object):
 
             # compute cross entropy loss
             logits = tf.matmul(lm_outputs, softmax_w, transpose_b=True) + softmax_b
-            loss = tf.nn.seq2seq.sequence_loss_by_example(
-                [logits],
-                [tf.reshape(self._targets, [-1])],
-                [tf.ones([batch_size * num_steps])])
+
+            loss = tf.nn.sparse_softmax_cross_entropy_with_logits(
+                logits=logits,
+                labels=tf.reshape(self._targets, [-1])
+            )
 
             # compute cost
             self._cost = cost = tf.reduce_sum(loss) / batch_size
