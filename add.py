@@ -66,12 +66,8 @@ class AdditiveModel(object):
                 input_ = tf.matmul(input_, softmax_win) + softmax_bin
                 lm_inputs.append(input_)
             lm_inputs = tf.stack(lm_inputs, axis=1)
-            # print(lm_inputs)
-            # print("===============")
 
-            # print(inputs)
             lm_outputs, lm_state = tf.nn.dynamic_rnn(lm_cell, lm_inputs, initial_state=self._initial_lm_state)
-            # lm_outputs, lm_state = tf.nn.dynamic_rnn(lm_cell, tf.reshape(lm_inputs, [batch_size, num_steps, rnn_size]), initial_state=self._initial_lm_state) #expected (rnn_size, batch_size)
             lm_outputs = tf.concat(lm_outputs, 1)
             lm_outputs = tf.reshape(lm_outputs, [-1, rnn_size])
 
@@ -85,11 +81,6 @@ class AdditiveModel(object):
                 logits=logits,
                 labels=tf.reshape(self._targets, [-1])
             )
-            # loss = tfl.sequence_loss_by_example(
-            #     [logits],
-            #     [tf.reshape(self._targets, [-1])],
-            #     [tf.ones([batch_size * num_steps])]
-            # )
 
             # compute cost
             self._cost = cost = tf.reduce_sum(loss) / batch_size

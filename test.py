@@ -9,7 +9,6 @@ import os, sys
 import pickle
 from utils import TextLoader
 from biLSTM import BiLSTMModel
-# from charCNN import CharCNN
 from add import AdditiveModel
 from word import WordModel
 
